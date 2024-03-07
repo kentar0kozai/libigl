@@ -10,41 +10,40 @@
 #include <cstring>
 
 #ifdef _WIN32
-  #include <windows.h>
-  #undef max
-  #undef min
+#include <windows.h>
+#undef max
+#undef min
 
-  #include <Commdlg.h>
+#include <Commdlg.h>
 #endif
 
-IGL_INLINE std::string igl::file_dialog_open()
-{
+IGL_INLINE std::string igl::file_dialog_open() {
   const int FILE_DIALOG_MAX_BUFFER = 1024;
   char buffer[FILE_DIALOG_MAX_BUFFER];
   buffer[0] = '\0';
-  buffer[FILE_DIALOG_MAX_BUFFER - 1] = 'x'; // Initialize last character with a char != '\0'
+  buffer[FILE_DIALOG_MAX_BUFFER - 1] =
+      'x'; // Initialize last character with a char != '\0'
 
 #ifdef __APPLE__
   // For apple use applescript hack
-  FILE * output = popen(
-    "osascript -e \""
-    "   tell application \\\"System Events\\\"\n"
-    "           activate\n"
-    "           set existing_file to choose file\n"
-    "   end tell\n"
-    "   set existing_file_path to (POSIX path of (existing_file))\n"
-    "\" 2>/dev/null | tr -d '\n' ","r");
-  if (output)
-  {
+  FILE *output =
+      popen("osascript -e \""
+            "   tell application \\\"System Events\\\"\n"
+            "           activate\n"
+            "           set existing_file to choose file\n"
+            "   end tell\n"
+            "   set existing_file_path to (POSIX path of (existing_file))\n"
+            "\" 2>/dev/null | tr -d '\n' ",
+            "r");
+  if (output) {
     auto ret = fgets(buffer, FILE_DIALOG_MAX_BUFFER, output);
-    if (ret == NULL || ferror(output))
-    {
+    if (ret == NULL || ferror(output)) {
       // I/O error
       buffer[0] = '\0';
     }
-    if (buffer[FILE_DIALOG_MAX_BUFFER - 1] == '\0')
-    {
-      // File name too long, buffer has been filled, so we return empty string instead
+    if (buffer[FILE_DIALOG_MAX_BUFFER - 1] == '\0') {
+      // File name too long, buffer has been filled, so we return empty string
+      // instead
       buffer[0] = '\0';
     }
   }
@@ -53,8 +52,8 @@ IGL_INLINE std::string igl::file_dialog_open()
   // Use native windows file dialog box
   // (code contributed by Tino Weinkauf)
 
-  OPENFILENAME ofn;       // common dialog box structure
-  char szFile[260];       // buffer for file name
+  OPENFILENAME ofn;    // common dialog box structure
+  wchar_t szFile[260]; // buffer for file name
 
   // Initialize OPENFILENAME
   ZeroMemory(&ofn, sizeof(ofn));
@@ -65,7 +64,11 @@ IGL_INLINE std::string igl::file_dialog_open()
   // use the contents of szFile to initialize itself.
   ofn.lpstrFile[0] = '\0';
   ofn.nMaxFile = sizeof(szFile);
-  ofn.lpstrFilter = "*.*\0";//off\0*.off\0obj\0*.obj\0mp\0*.mp\0";
+  char text[] = "*.*\0";
+  wchar_t wtext[20];
+  mbstowcs(wtext, text, strlen(text) + 1); // Plus null
+  LPWSTR ptr = wtext;
+  ofn.lpstrFilter = ptr; // off\0*.off\0obj\0*.obj\0mp\0*.mp\0";
   ofn.nFilterIndex = 1;
   ofn.lpstrFileTitle = NULL;
   ofn.nMaxFileTitle = 0;
@@ -74,10 +77,8 @@ IGL_INLINE std::string igl::file_dialog_open()
 
   // Display the Open dialog box.
   int pos = 0;
-  if (GetOpenFileName(&ofn)==TRUE)
-  {
-    while(ofn.lpstrFile[pos] != '\0')
-    {
+  if (GetOpenFileName(&ofn) == TRUE) {
+    while (ofn.lpstrFile[pos] != '\0') {
       buffer[pos] = (char)ofn.lpstrFile[pos];
       pos++;
     }
@@ -86,26 +87,23 @@ IGL_INLINE std::string igl::file_dialog_open()
 #else
 
   // For linux use zenity
-  FILE * output = popen("/usr/bin/zenity --file-selection","r");
-  if (output)
-  {
+  FILE *output = popen("/usr/bin/zenity --file-selection", "r");
+  if (output) {
     auto ret = fgets(buffer, FILE_DIALOG_MAX_BUFFER, output);
-    if (ret == NULL || ferror(output))
-    {
+    if (ret == NULL || ferror(output)) {
       // I/O error
       buffer[0] = '\0';
     }
-    if (buffer[FILE_DIALOG_MAX_BUFFER - 1] == '\0')
-    {
-      // File name too long, buffer has been filled, so we return empty string instead
+    if (buffer[FILE_DIALOG_MAX_BUFFER - 1] == '\0') {
+      // File name too long, buffer has been filled, so we return empty string
+      // instead
       buffer[0] = '\0';
     }
   }
 
   // Replace last '\n' by '\0'
-  if(strlen(buffer) > 0)
-  {
-    buffer[strlen(buffer)-1] = '\0';
+  if (strlen(buffer) > 0) {
+    buffer[strlen(buffer) - 1] = '\0';
   }
 
 #endif

@@ -10,41 +10,40 @@
 #include <cstring>
 
 #ifdef _WIN32
- #include <windows.h>
- #include <Commdlg.h>
+#include <Commdlg.h>
+#include <windows.h>
 #endif
 
-IGL_INLINE std::string igl::file_dialog_save()
-{
+IGL_INLINE std::string igl::file_dialog_save() {
   const int FILE_DIALOG_MAX_BUFFER = 1024;
   char buffer[FILE_DIALOG_MAX_BUFFER];
   buffer[0] = '\0';
-  buffer[FILE_DIALOG_MAX_BUFFER - 1] = 'x'; // Initialize last character with a char != '\0'
+  buffer[FILE_DIALOG_MAX_BUFFER - 1] =
+      'x'; // Initialize last character with a char != '\0'
 
 #ifdef __APPLE__
   // For apple use applescript hack
   // There is currently a bug in Applescript that strips extensions off
   // of chosen existing files in the "choose file name" dialog
   // I'm assuming that will be fixed soon
-  FILE * output = popen(
-    "osascript -e \""
-    "   tell application \\\"System Events\\\"\n"
-    "           activate\n"
-    "           set existing_file to choose file name\n"
-    "   end tell\n"
-    "   set existing_file_path to (POSIX path of (existing_file))\n"
-    "\" 2>/dev/null | tr -d '\n' ","r");
-  if (output)
-  {
+  FILE *output =
+      popen("osascript -e \""
+            "   tell application \\\"System Events\\\"\n"
+            "           activate\n"
+            "           set existing_file to choose file name\n"
+            "   end tell\n"
+            "   set existing_file_path to (POSIX path of (existing_file))\n"
+            "\" 2>/dev/null | tr -d '\n' ",
+            "r");
+  if (output) {
     auto ret = fgets(buffer, FILE_DIALOG_MAX_BUFFER, output);
-    if (ret == NULL || ferror(output))
-    {
+    if (ret == NULL || ferror(output)) {
       // I/O error
       buffer[0] = '\0';
     }
-    if (buffer[FILE_DIALOG_MAX_BUFFER - 1] == '\0')
-    {
-      // File name too long, buffer has been filled, so we return empty string instead
+    if (buffer[FILE_DIALOG_MAX_BUFFER - 1] == '\0') {
+      // File name too long, buffer has been filled, so we return empty string
+      // instead
       buffer[0] = '\0';
     }
   }
@@ -53,19 +52,23 @@ IGL_INLINE std::string igl::file_dialog_save()
   // Use native windows file dialog box
   // (code contributed by Tino Weinkauf)
 
-  OPENFILENAME ofn;       // common dialog box structure
-  char szFile[260];       // buffer for file name
+  OPENFILENAME ofn;    // common dialog box structure
+  wchar_t szFile[260]; // buffer for file name
 
   // Initialize OPENFILENAME
   ZeroMemory(&ofn, sizeof(ofn));
   ofn.lStructSize = sizeof(ofn);
-  ofn.hwndOwner = NULL;//hwnd;
+  ofn.hwndOwner = NULL; // hwnd;
   ofn.lpstrFile = szFile;
   // Set lpstrFile[0] to '\0' so that GetOpenFileName does not
   // use the contents of szFile to initialize itself.
   ofn.lpstrFile[0] = '\0';
   ofn.nMaxFile = sizeof(szFile);
-  ofn.lpstrFilter = "";
+  char text[] = "";
+  wchar_t wtext[20];
+  mbstowcs(wtext, text, strlen(text) + 1); // Plus null
+  LPWSTR ptr = wtext;
+  ofn.lpstrFilter = ptr;
   ofn.nFilterIndex = 1;
   ofn.lpstrFileTitle = NULL;
   ofn.nMaxFileTitle = 0;
@@ -74,10 +77,8 @@ IGL_INLINE std::string igl::file_dialog_save()
 
   // Display the Open dialog box.
   int pos = 0;
-  if (GetSaveFileName(&ofn)==TRUE)
-  {
-    while(ofn.lpstrFile[pos] != '\0')
-    {
+  if (GetSaveFileName(&ofn) == TRUE) {
+    while (ofn.lpstrFile[pos] != '\0') {
       buffer[pos] = (char)ofn.lpstrFile[pos];
       pos++;
     }
@@ -86,26 +87,23 @@ IGL_INLINE std::string igl::file_dialog_save()
 
 #else
   // For every other machine type use zenity
-  FILE * output = popen("/usr/bin/zenity --file-selection --save","r");
-  if (output)
-  {
+  FILE *output = popen("/usr/bin/zenity --file-selection --save", "r");
+  if (output) {
     auto ret = fgets(buffer, FILE_DIALOG_MAX_BUFFER, output);
-    if (ret == NULL || ferror(output))
-    {
+    if (ret == NULL || ferror(output)) {
       // I/O error
       buffer[0] = '\0';
     }
-    if (buffer[FILE_DIALOG_MAX_BUFFER - 1] == '\0')
-    {
-      // File name too long, buffer has been filled, so we return empty string instead
+    if (buffer[FILE_DIALOG_MAX_BUFFER - 1] == '\0') {
+      // File name too long, buffer has been filled, so we return empty string
+      // instead
       buffer[0] = '\0';
     }
   }
 
   // Replace last '\n' by '\0'
-  if(strlen(buffer) > 0)
-  {
-    buffer[strlen(buffer)-1] = '\0';
+  if (strlen(buffer) > 0) {
+    buffer[strlen(buffer) - 1] = '\0';
   }
 
 #endif
